@@ -15,6 +15,18 @@ from alive_progress import alive_bar
 from early_stopping_pytorch import EarlyStopping
 
 def train_model(data_loader: DataLoader, ta_model: nn.Module, train_loss_fn: nn.Module, train_optimizer: torch.optim.Optimizer, accuracy_fn, train_device):
+    """
+        This function trains a given model for on epoch
+
+        :param data_loader: describe about parameter p1
+        :param ta_model: describe about parameter p2
+        :param train_loss_fn describe about parameter p3
+        :param train_optimizer describe about parameter p3
+        :param accuracy_fn describe about parameter p3
+        :param train_device describe about parameter p3
+        """
+
+    pass
     train_loss, train_acc = 0, 0
     model.to(train_device)
     model.train()
@@ -28,12 +40,12 @@ def train_model(data_loader: DataLoader, ta_model: nn.Module, train_loss_fn: nn.
         loss.backward()
         optimizer.step()
         if batch%200 == 0:
-            # noinspection PyTypeChecker
             print(f"Trained on {batch*len(x)}/{len(data_loader.dataset)} samples")
     train_loss /= len(data_loader)
     train_acc /= len(data_loader)
     print(f"Train Loss: {train_loss:.5f} | Train Accuracy: {(train_acc*100):.3f}")
     return train_loss.cpu().item(), train_acc.cpu().item()
+
 
 def valid_model(data_loader: DataLoader, v_model: nn.Module, v_loss_fn: nn.Module, accuracy_fn, v_device):
     v_l, v_a = 0, 0
@@ -87,82 +99,8 @@ def print_accuracies(train_a, test_a, num_epoch):
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-'''
-class FashionMNISTModelV1(nn.Module):
-    def __init__(self, input_shape, hidden_units, output_shape, dropout):
-        super(FashionMNISTModelV1, self).__init__()
-        # Block 1
-        self.layer1 = Conv2d(in_channels=input_shape, out_channels=hidden_units, kernel_size=3, stride=1, padding=1)
-        self.layer2 = ReLU()
-        self.layer3 = BatchNorm2d(hidden_units)
-        self.layer4 = Conv2d(in_channels=hidden_units, out_channels=hidden_units, kernel_size=3, stride=1, padding=1)
-        self.layer5 = ReLU()
-        self.layer6 = BatchNorm2d(hidden_units)
-        self.layer7 = MaxPool2d(2)
-        self.layer8 = Dropout(dropout)
-        # Block 2
-        self.layer9 = Conv2d(in_channels=hidden_units, out_channels=hidden_units, kernel_size=3, stride=1, padding=1)
-        self.layer10 = ReLU()
-        self.layer11 = BatchNorm2d(hidden_units)
-        self.layer12 = Conv2d(in_channels=hidden_units, out_channels=hidden_units, kernel_size=3, stride=1, padding=1)
-        self.layer13 = ReLU()
-        self.layer14 = BatchNorm2d(hidden_units)
-        self.layer15 = MaxPool2d(2)
-        self.layer16 = Dropout(dropout)
-        # Block 3
-        self.layer17 = Conv2d(in_channels=hidden_units, out_channels=hidden_units, kernel_size=3, stride=1, padding=1)
-        self.layer18 = ReLU()
-        self.layer19 = BatchNorm2d(hidden_units)
-        self.layer20 = Conv2d(in_channels=hidden_units, out_channels=hidden_units, kernel_size=3, stride=1, padding=1)
-        self.layer21 = ReLU()
-        self.layer22 = BatchNorm2d(hidden_units)
-        self.layer23 = Conv2d(in_channels=hidden_units, out_channels=hidden_units, kernel_size=3, stride=1, padding=1)
-        self.layer24 = ReLU()
-        self.layer25 = BatchNorm2d(hidden_units)
-        self.layer26 = Dropout(dropout)
-        # FC+Classifier
-        self.layer27 = Flatten()
-        self.layer28 = Linear(in_features=hidden_units * 7 * 7, out_features=hidden_units * 7 * 7)
-        self.layer29 = ReLU()
-        self.layer30 = BatchNorm1d(hidden_units * 7 * 7)
-        self.layer31 = Dropout(0.1)
-        self.layer32 = Linear(in_features=hidden_units * 7 * 7, out_features=output_shape)
 
-    def forward(self, x):
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        x = self.layer5(x)
-        x = self.layer6(x)
-        x = self.layer7(x)
-        x = self.layer8(x)
-        x = self.layer9(x)
-        x = self.layer10(x)
-        x = self.layer11(x)
-        x = self.layer12(x)
-        x = self.layer13(x)
-        x = self.layer14(x)
-        x = self.layer15(x)
-        x = self.layer16(x)
-        x = self.layer17(x)
-        x = self.layer18(x)
-        x = self.layer19(x)
-        x = self.layer20(x)
-        x = self.layer21(x)
-        x = self.layer22(x)
-        x = self.layer23(x)
-        x = self.layer24(x)
-        x = self.layer25(x)
-        x = self.layer26(x)
-        x = self.layer27(x)
-        x = self.layer28(x)
-        x = self.layer29(x)
-        x = self.layer30(x)
-        x = self.layer31(x)
-        x = self.layer32(x)
-        return x
-'''
+
 
 class FashionMNISTModelV1(nn.Module):
     def __init__(self, input_shape, hidden_units, output_shape, dropout):
@@ -257,8 +195,6 @@ manual_seed(42)
 model = FashionMNISTModelV1(1, 128, 10, 0.5).to(device)
 loss_fn = CrossEntropyLoss()
 optimizer = Adam(params=model.parameters(), lr=0.001, weight_decay=0.00003)
-#0.001, 0.00009, 94.1%, epoch 46
-#0.001, 0.00001, 94.26%, epoch 47
 accuracy_f = Accuracy(task="multiclass", num_classes=10).to(device)
 early_stopper = EarlyStopping(patience=5, verbose=True)
 print("Done preparing model\n")
@@ -299,12 +235,10 @@ train_time_end = timer()
 print("Finished training")
 print(f"Trained for {(train_time_end-train_time_start):.3f} seconds")
 print(f"Best Test accuracy in epoch {np.argmax(test_accs)+1}")
-MODEL_PATH = Path("../models")
+MODEL_PATH = Path("../models/FashionMNIST")
 MODEL_PATH.mkdir(parents=True, exist_ok=True)
 MODEL_NAME = "FashionMNISTModelStateDictPool.pth"
 MODEL_SAVE_PATH = MODEL_PATH/MODEL_NAME
 
 print(f"Saving model to {MODEL_SAVE_PATH}")
 torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH)
-
-#Produces an accuracy of 93.261%

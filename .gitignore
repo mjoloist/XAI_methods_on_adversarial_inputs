@@ -1,2 +1,3 @@
 /models/FashionMNIST/data/
 /classifier/model_visualization/data/
+.idea/
