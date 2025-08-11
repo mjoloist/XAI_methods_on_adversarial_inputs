@@ -1,0 +1,11 @@
+opencv-python~=4.11.0.86
+foolbox~=3.3.4
+matplotlib==3.8.4
+numpy~=2.1.2
+torch~=2.7.0+cu128
+packaging~=25.0
+scipy~=1.15.3
+torchvision~=0.22.0+cu128
+torchmetrics~=1.7.1
+alive-progress~=3.2.0
+grad-cam~=1.5.5
