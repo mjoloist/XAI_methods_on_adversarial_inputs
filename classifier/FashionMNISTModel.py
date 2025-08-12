@@ -16,16 +16,17 @@ from early_stopping_pytorch import EarlyStopping
 
 def train_model(data_loader: DataLoader, ta_model: nn.Module, train_loss_fn: nn.Module, train_optimizer: torch.optim.Optimizer, accuracy_fn, train_device):
     """
-        This function trains a given model for on epoch
-
-        :param data_loader: describe about parameter p1
-        :param ta_model: describe about parameter p2
-        :param train_loss_fn describe about parameter p3
-        :param train_optimizer describe about parameter p3
-        :param accuracy_fn describe about parameter p3
-        :param train_device describe about parameter p3
-        """
-
+    This function performs for a given model a training epoch
+    :param data_loader: a DataLoader object that contains the training data
+    :param ta_model: the PyTorch model to be trained
+    :param train_loss_fn: a loss function that takes the predicted logits as its
+    first parameter and the true class as its second and returns a pytorch tensor with a single item
+    :param train_optimizer: a pytorch optimizer
+    :param accuracy_fn: an accuracy function that takes the predicted class as its
+    first parameter and the true class as its second and returns a pytorch tensor with a single item
+    :param train_device: device where the model shoould be trained on
+    :return: training loss, training accuracy
+    """
     pass
     train_loss, train_acc = 0, 0
     model.to(train_device)
@@ -48,6 +49,17 @@ def train_model(data_loader: DataLoader, ta_model: nn.Module, train_loss_fn: nn.
 
 
 def valid_model(data_loader: DataLoader, v_model: nn.Module, v_loss_fn: nn.Module, accuracy_fn, v_device):
+    """
+    This function calculates the validation loss and validation accuracy
+    :param data_loader: a DataLoader object that contains the validation data
+    :param v_model: a PyTorch model
+    :param v_loss_fn: a loss function that takes the predicted logits as its
+    first parameter and the true class as its second and returns a pytorch tensor with a single item
+    :param accuracy_fn: an accuracy function that takes the predicted class as its
+    first parameter and the true class as its second and returns a pytorch tensor with a single item
+    :param v_device: device on which to run the model, eg. cuda or cpu
+    :return: validation loss, validation accuracy
+    """
     v_l, v_a = 0, 0
     model.to(v_device)
     model.eval()
@@ -64,6 +76,18 @@ def valid_model(data_loader: DataLoader, v_model: nn.Module, v_loss_fn: nn.Modul
     return v_l.cpu().item(), v_a.cpu().item()
 
 def test_model(data_loader: DataLoader, te_model: nn.Module, test_loss_fn: nn.Module, accuracy_fn, test_device):
+    """
+        This function calculates the test loss and test accuracy. This is separate from validation since it prints a different string
+        and due to testing purposes
+        :param data_loader: a DataLoader object that contains the validation data
+        :param te_model: a PyTorch model
+        :param test_loss_fn: a loss function that takes the predicted logits as its
+        first parameter and the true class as its second and returns a pytorch tensor with a single item
+        :param accuracy_fn: an accuracy function that takes the predicted class as its
+        first parameter and the true class as its second and returns a pytorch tensor with a single item
+        :param test_device: device on which to run the model, eg. cuda or cpu
+        :return: test loss, test accuracy
+        """
     test_l, test_a = 0, 0
     model.to(test_device)
     model.eval()
@@ -80,6 +104,13 @@ def test_model(data_loader: DataLoader, te_model: nn.Module, test_loss_fn: nn.Mo
     return test_l.cpu().item(), test_a.cpu().item()
 
 def print_losses(train_l, test_l, num_epoch):
+    """
+    Plots the graph of all train and test losses
+    :param train_l: train losses
+    :param test_l: test losses
+    :param num_epoch: number of epochs the model already trained
+    :return: None
+    """
     x = np.arange(1, (num_epoch+2), step=1)
     print(x)
     plt.plot(x, train_l, c="g", label="Train Loss")
@@ -89,6 +120,13 @@ def print_losses(train_l, test_l, num_epoch):
     plt.show()
 
 def print_accuracies(train_a, test_a, num_epoch):
+    """
+    Plots the graph of all train and test accuracies
+    :param train_a: train accuracies
+    :param test_a: test accuracies
+    :param num_epoch: number of epochs the model already trained
+    :return: None
+    """
     x = np.arange(1, (num_epoch+2), step=1)
     plt.plot(x, train_a, c="g", label="Train Accuracy")
     plt.plot(x, test_a, c="r", label="Test Accuracy")
@@ -103,6 +141,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class FashionMNISTModelV1(nn.Module):
+    """
+    This is the CNN Model inspired by the VGG-Architecture, it uses three convolution blocks, global average pooling and a final fully connected layer
+    """
     def __init__(self, input_shape, hidden_units, output_shape, dropout):
         super(FashionMNISTModelV1, self).__init__()
         # Block 1
@@ -171,7 +212,7 @@ class FashionMNISTModelV1(nn.Module):
         x = self.layer29(x)
         return x
 
-
+#  The following prepares the train, validation and test data
 print("Preparing data...")
 train_data = datasets.FashionMNIST(root="data", train=True, download=True, transform=ToTensor())
 test_data = datasets.FashionMNIST(root="data", train=False, download=True, transform=ToTensor())
@@ -189,7 +230,7 @@ validation_dataLoader = DataLoader(valid_data, shuffle=True, batch_size=BATCH_SI
 test_dataLoader = DataLoader(test_data, shuffle=True, batch_size=BATCH_SIZE)
 print("Done preparing data.")
 
-
+# The following prepares all other classes like the CNN, the loss Function, the optimizer etc.
 print("Preparing model, optimizer etc...")
 manual_seed(42)
 model = FashionMNISTModelV1(1, 128, 10, 0.5).to(device)
@@ -199,7 +240,7 @@ accuracy_f = Accuracy(task="multiclass", num_classes=10).to(device)
 early_stopper = EarlyStopping(patience=5, verbose=True)
 print("Done preparing model\n")
 
-
+# This initializes the variables for the training loop
 print("Starting training...")
 epochs = 50
 train_time_start = timer()
@@ -209,6 +250,8 @@ validation_losses = []
 validation_accs = []
 test_losses = []
 test_accs = []
+
+# The following is the training loop, it first performs a full training step, then calculates test loss and accuracies and then validation loss and accuracies. After that it plots the graphs and checks for early stopping to avoid overfitting
 with alive_bar(epochs, force_tty=True) as bar:
     for epoch in range(epochs):
         bar()
@@ -232,6 +275,8 @@ with alive_bar(epochs, force_tty=True) as bar:
             print_accuracies(train_accs, test_accs, epoch)
             break
 train_time_end = timer()
+
+# This prints the final results and saves the models state_dict
 print("Finished training")
 print(f"Trained for {(train_time_end-train_time_start):.3f} seconds")
 print(f"Best Test accuracy in epoch {np.argmax(test_accs)+1}")
