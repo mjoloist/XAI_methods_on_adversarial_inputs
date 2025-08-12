@@ -29,8 +29,8 @@ def train_model(data_loader: DataLoader, ta_model: nn.Module, train_loss_fn: nn.
     """
     pass
     train_loss, train_acc = 0, 0
-    model.to(train_device)
-    model.train()
+    ta_model.to(train_device)
+    ta_model.train()
     for batch, (x, y) in enumerate(data_loader):
         x, y = x.to(train_device), y.to(train_device)
         y_logit = ta_model(x)
@@ -39,7 +39,7 @@ def train_model(data_loader: DataLoader, ta_model: nn.Module, train_loss_fn: nn.
         train_acc += accuracy_fn(softmax(y_logit, dim=1).argmax(dim=1), y)
         train_optimizer.zero_grad()
         loss.backward()
-        optimizer.step()
+        train_optimizer.step()
         if batch%200 == 0:
             print(f"Trained on {batch*len(x)}/{len(data_loader.dataset)} samples")
     train_loss /= len(data_loader)
@@ -61,8 +61,8 @@ def valid_model(data_loader: DataLoader, v_model: nn.Module, v_loss_fn: nn.Modul
     :return: validation loss, validation accuracy
     """
     v_l, v_a = 0, 0
-    model.to(v_device)
-    model.eval()
+    v_model.to(v_device)
+    v_model.eval()
     with inference_mode():
         for batch, (x, y) in enumerate(data_loader):
             x, y = x.to(v_device), y.to(v_device)
@@ -89,8 +89,8 @@ def test_model(data_loader: DataLoader, te_model: nn.Module, test_loss_fn: nn.Mo
         :return: test loss, test accuracy
         """
     test_l, test_a = 0, 0
-    model.to(test_device)
-    model.eval()
+    te_model.to(test_device)
+    te_model.eval()
     with inference_mode():
         for batch, (x, y) in enumerate(data_loader):
             x, y = x.to(test_device), y.to(test_device)
@@ -212,78 +212,79 @@ class FashionMNISTModelV1(nn.Module):
         x = self.layer29(x)
         return x
 
-#  The following prepares the train, validation and test data
-print("Preparing data...")
-train_data = datasets.FashionMNIST(root="data", train=True, download=True, transform=ToTensor())
-test_data = datasets.FashionMNIST(root="data", train=False, download=True, transform=ToTensor())
+def run_train():
+    #  The following prepares the train, validation and test data
+    print("Preparing data...")
+    train_data = datasets.FashionMNIST(root="data", train=True, download=True, transform=ToTensor())
+    test_data = datasets.FashionMNIST(root="data", train=False, download=True, transform=ToTensor())
 
-generator1 = torch.Generator().manual_seed(456)
-train_split_size = int(len(train_data)*0.8)
-val_split_size = len(train_data)-train_split_size
-new_train_data, valid_data = random_split(train_data, [train_split_size, val_split_size], generator=generator1)
+    generator1 = torch.Generator().manual_seed(456)
+    train_split_size = int(len(train_data)*0.8)
+    val_split_size = len(train_data)-train_split_size
+    new_train_data, valid_data = random_split(train_data, [train_split_size, val_split_size], generator=generator1)
 
-class_names = train_data.classes
+    class_names = train_data.classes
 
-BATCH_SIZE = 32
-train_dataLoader = DataLoader(new_train_data, shuffle=True, batch_size=BATCH_SIZE)
-validation_dataLoader = DataLoader(valid_data, shuffle=True, batch_size=BATCH_SIZE)
-test_dataLoader = DataLoader(test_data, shuffle=True, batch_size=BATCH_SIZE)
-print("Done preparing data.")
+    BATCH_SIZE = 32
+    train_dataLoader = DataLoader(new_train_data, shuffle=True, batch_size=BATCH_SIZE)
+    validation_dataLoader = DataLoader(valid_data, shuffle=True, batch_size=BATCH_SIZE)
+    test_dataLoader = DataLoader(test_data, shuffle=True, batch_size=BATCH_SIZE)
+    print("Done preparing data.")
 
-# The following prepares all other classes like the CNN, the loss Function, the optimizer etc.
-print("Preparing model, optimizer etc...")
-manual_seed(42)
-model = FashionMNISTModelV1(1, 128, 10, 0.5).to(device)
-loss_fn = CrossEntropyLoss()
-optimizer = Adam(params=model.parameters(), lr=0.001, weight_decay=0.00003)
-accuracy_f = Accuracy(task="multiclass", num_classes=10).to(device)
-early_stopper = EarlyStopping(patience=5, verbose=True)
-print("Done preparing model\n")
+    # The following prepares all other classes like the CNN, the loss Function, the optimizer etc.
+    print("Preparing model, optimizer etc...")
+    manual_seed(42)
+    model = FashionMNISTModelV1(1, 128, 10, 0.5).to(device)
+    loss_fn = CrossEntropyLoss()
+    optimizer = Adam(params=model.parameters(), lr=0.001, weight_decay=0.00003)
+    accuracy_f = Accuracy(task="multiclass", num_classes=10).to(device)
+    early_stopper = EarlyStopping(patience=5, verbose=True)
+    print("Done preparing model\n")
 
-# This initializes the variables for the training loop
-print("Starting training...")
-epochs = 50
-train_time_start = timer()
-train_losses = []
-train_accs = []
-validation_losses = []
-validation_accs = []
-test_losses = []
-test_accs = []
+    # This initializes the variables for the training loop
+    print("Starting training...")
+    epochs = 50
+    train_time_start = timer()
+    train_losses = []
+    train_accs = []
+    validation_losses = []
+    validation_accs = []
+    test_losses = []
+    test_accs = []
 
-# The following is the training loop, it first performs a full training step, then calculates test loss and accuracies and then validation loss and accuracies. After that it plots the graphs and checks for early stopping to avoid overfitting
-with alive_bar(epochs, force_tty=True) as bar:
-    for epoch in range(epochs):
-        bar()
-        print(f"\nEpoch: {epoch+1}\n----------------------\n")
-        train_loss, train_acc = train_model(train_dataLoader, model, loss_fn, optimizer, accuracy_f, device)
-        train_losses.append(train_loss)
-        train_accs.append(train_acc)
-        test_loss, test_acc = test_model(test_dataLoader, model, loss_fn, accuracy_f, device)
-        test_losses.append(test_loss)
-        test_accs.append(test_acc)
-        validation_loss, validation_acc = valid_model(validation_dataLoader, model, loss_fn, accuracy_f, device)
-        validation_losses.append(validation_loss)
-        validation_accs.append(validation_acc)
-        if (epoch+1)%5 == 0:
-            print_losses(train_losses, test_losses, epoch)
-            print_accuracies(train_accs, test_accs, epoch)
-        early_stopper(validation_loss, model)
-        if early_stopper.early_stop:
-            print("Early stopping triggered")
-            print_losses(train_losses, test_losses, epoch)
-            print_accuracies(train_accs, test_accs, epoch)
-            break
-train_time_end = timer()
+    # The following is the training loop, it first performs a full training step, then calculates test loss and accuracies and then validation loss and accuracies. After that it plots the graphs and checks for early stopping to avoid overfitting
+    with alive_bar(epochs, force_tty=True) as bar:
+        for epoch in range(epochs):
+            bar()
+            print(f"\nEpoch: {epoch+1}\n----------------------\n")
+            train_loss, train_acc = train_model(train_dataLoader, model, loss_fn, optimizer, accuracy_f, device)
+            train_losses.append(train_loss)
+            train_accs.append(train_acc)
+            test_loss, test_acc = test_model(test_dataLoader, model, loss_fn, accuracy_f, device)
+            test_losses.append(test_loss)
+            test_accs.append(test_acc)
+            validation_loss, validation_acc = valid_model(validation_dataLoader, model, loss_fn, accuracy_f, device)
+            validation_losses.append(validation_loss)
+            validation_accs.append(validation_acc)
+            if (epoch+1)%5 == 0:
+                print_losses(train_losses, test_losses, epoch)
+                print_accuracies(train_accs, test_accs, epoch)
+            early_stopper(validation_loss, model)
+            if early_stopper.early_stop:
+                print("Early stopping triggered")
+                print_losses(train_losses, test_losses, epoch)
+                print_accuracies(train_accs, test_accs, epoch)
+                break
+    train_time_end = timer()
 
-# This prints the final results and saves the models state_dict
-print("Finished training")
-print(f"Trained for {(train_time_end-train_time_start):.3f} seconds")
-print(f"Best Test accuracy in epoch {np.argmax(test_accs)+1}")
-MODEL_PATH = Path("../models/FashionMNIST")
-MODEL_PATH.mkdir(parents=True, exist_ok=True)
-MODEL_NAME = "FashionMNISTModelStateDictPool.pth"
-MODEL_SAVE_PATH = MODEL_PATH/MODEL_NAME
+    # This prints the final results and saves the models state_dict
+    print("Finished training")
+    print(f"Trained for {(train_time_end-train_time_start):.3f} seconds")
+    print(f"Best Test accuracy in epoch {np.argmax(test_accs)+1}")
+    MODEL_PATH = Path("../models/FashionMNIST")
+    MODEL_PATH.mkdir(parents=True, exist_ok=True)
+    MODEL_NAME = "FashionMNISTModelStateDictPool.pth"
+    MODEL_SAVE_PATH = MODEL_PATH/MODEL_NAME
 
-print(f"Saving model to {MODEL_SAVE_PATH}")
-torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH)
+    print(f"Saving model to {MODEL_SAVE_PATH}")
+    torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH)
